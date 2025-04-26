@@ -24,6 +24,22 @@ namespace ConsoleApp1.Services
             }
         }
 
+        public static void CloseConnection()
+        {
+            if(_connection != null && _connection.State == System.Data.ConnectionState.Open)
+            {
+                try
+                {
+                    _connection.Close();
+                    Console.WriteLine("Session has been terminated...");
+                }
+                catch(MySqlException ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+        }
+
         public static MySqlConnection GetConnection()
         {
             if (_connection == null)

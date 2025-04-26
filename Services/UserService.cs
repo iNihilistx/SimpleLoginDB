@@ -1,5 +1,6 @@
 ﻿using System;
 using ConsoleApp1.Models;
+using ConsoleApp1.Helpers;
 using MySqlConnector;
 
 namespace ConsoleApp1.Services
@@ -15,9 +16,10 @@ namespace ConsoleApp1.Services
 
         public void RegisterUser(string username, string password)
         {
+            string hashedPassword = PasswordHasher.HashPassword(password);
             var command = new MySqlCommand("INSERT INTO login_table (LoginUsername, LoginPassword) VALUES (@username, @password)", _connection);
             command.Parameters.AddWithValue("@username", username);
-            command.Parameters.AddWithValue("@password", password);
+            command.Parameters.AddWithValue("@password", hashedPassword);
 
             try
             {
@@ -33,22 +35,37 @@ namespace ConsoleApp1.Services
 
         public bool Login(string username, string password)
         {
-            var command = new MySqlCommand("SELECT * FROM login_table WHERE LoginUsername = @username AND LoginPassword = @password", _connection);
+            var command = new MySqlCommand("SELECT LoginPassword FROM login_table WHERE LoginUsername = @username", _connection);
             command.Parameters.AddWithValue("@username", username);
-            command.Parameters.AddWithValue("@password", password);
 
             using var reader = command.ExecuteReader();
-            bool Success = reader.HasRows;
-
-            if(Success)
+            bool success = false;
+            try
             {
-                Console.WriteLine("Login successful.");
+                if(reader.Read())
+                {
+                    string storedHash = reader.GetString("LoginPassword");
+                    if(PasswordHasher.VerifyPassword(password, storedHash))
+                    {
+                        Console.WriteLine("Login successful.");
+                        success = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid username or password.");
+                        success = false;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Invalid username or password.");
+                }
             }
-            else
+            catch(MySqlException ex)
             {
-                Console.WriteLine("Login failed. Invalid username or password.");
+                Console.WriteLine(ex.Message);
             }
-            return Success;
+            return success;
         }
     }
 }
